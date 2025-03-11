@@ -560,14 +560,11 @@ class MyPythonNode(Node):
         #################################
 
         self.z_des = self.z_final
-<<<<<<< Updated upstream
         error = self.z_des - current_depth
-        correction_depth = self.Kp * error
-=======
-        error = self.z_des - current_data
         correction_force = self.Kp * error
-        correction_depth = self.thrust_to_pwm(correction_force)
->>>>>>> Stashed changes
+        correction_force = self.thrust_to_pwm(correction_force)
+
+        #################################
         
         # Uncomment the following line to maintain the initial depth when depth hold mode was activated
         # self.z_des = self.depth_p0
@@ -582,16 +579,16 @@ class MyPythonNode(Node):
 
         # Proportional controller
         error = self.z_des - current_depth
-        correction_depth = self.Kp * error
+        correction_force = self.Kp * error
         
         # # Proportional controller with floatability compensation
         # error = self.z_des - data
-        # correction_depth = self.Kp * error + self.flotability
+        # correction_force = self.Kp * error + self.flotability
 
         # # Proportional Integral controller
         # error = self.z_des - data
         # self.integral_error += error * dt
-        # correction_depth = self.Kp * error + self.Ki * self.integral_error + self.flotability
+        # correction_force = self.Kp * error + self.Ki * self.integral_error + self.flotability
 
         # # Estimate the heave velocity using alpha-beta filter
         # self.estimate_heave(dt)
@@ -600,7 +597,7 @@ class MyPythonNode(Node):
         # error = self.z_des - data
         # self.integral_error += error * dt
         # self.derivative_error = w_des - self.w
-        # correction_depth = self.Kp * error + self.Ki * self.integral_error + self.Kd * self.derivative_error + self.flotability
+        # correction_force = self.Kp * error + self.Ki * self.integral_error + self.Kd * self.derivative_error + self.flotability
 
         # update Correction_depth
 
@@ -608,13 +605,9 @@ class MyPythonNode(Node):
         # you supply here the depth but it takes as argument a thrust force in N
         ####################
 
-<<<<<<< Updated upstream
-        correction_depth = self.thrust_to_pwm(correction_depth)
-=======
         self.get_logger().info(f"error: {error:.2f} m")
         
         correction_depth = self.thrust_to_pwm(correction_force)
->>>>>>> Stashed changes
 
         # Send PWM commands to motors in timer
         self.Correction_depth = correction_depth
