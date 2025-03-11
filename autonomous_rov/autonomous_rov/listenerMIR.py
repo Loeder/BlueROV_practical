@@ -560,8 +560,14 @@ class MyPythonNode(Node):
         #################################
 
         self.z_des = self.z_final
+<<<<<<< Updated upstream
         error = self.z_des - current_depth
         correction_depth = self.Kp * error
+=======
+        error = self.z_des - current_data
+        correction_force = self.Kp * error
+        correction_depth = self.thrust_to_pwm(correction_force)
+>>>>>>> Stashed changes
         
         # Uncomment the following line to maintain the initial depth when depth hold mode was activated
         # self.z_des = self.depth_p0
@@ -602,7 +608,13 @@ class MyPythonNode(Node):
         # you supply here the depth but it takes as argument a thrust force in N
         ####################
 
+<<<<<<< Updated upstream
         correction_depth = self.thrust_to_pwm(correction_depth)
+=======
+        self.get_logger().info(f"error: {error:.2f} m")
+        
+        correction_depth = self.thrust_to_pwm(correction_force)
+>>>>>>> Stashed changes
 
         # Send PWM commands to motors in timer
         self.Correction_depth = correction_depth
