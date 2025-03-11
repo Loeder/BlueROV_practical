@@ -35,6 +35,8 @@ class MyPythonNode(Node):
         self.pub_depth = self.create_publisher(Float64, 'depth', 10)
         self.pub_angular_velocity = self.create_publisher(Twist, 'angular_velocity', 10)
         self.pub_linear_velocity = self.create_publisher(Twist, 'linear_velocity', 10)
+        self.pub_desired_depth = self.create_publisher(Float64, 'z_des', 10)
+        self.pub_desired_heave = self.create_publisher(Float64, 'w_des', 10)
         self.get_logger().info("Publishers created.")
 
         self.get_logger().info("ask router to create endpoint to enable mavlink/from publication.")
@@ -522,7 +524,7 @@ class MyPythonNode(Node):
         # Implement the control logic to maintain the vehicle at the same depth  
         # as when depth hold mode was activated (depth_p0).
 
-        current_data = data.data
+        current_depth = data.data
 
         current_time = self.clock.now().to_msg().sec + self.clock.now().to_msg().nanosec * 1e-9  # Get current time in seconds
 
@@ -537,11 +539,11 @@ class MyPythonNode(Node):
 
         if (self.init_p0):
             # 1st execution, init
-            self.depth_p0 = current_data
-            self.z_init = current_data
+            self.depth_p0 = current_depth
+            self.z_init = current_depth
             self.initial_time = current_time
             self.integral_error = 0
-            self.z = current_data  # Initialize the depth estimate
+            self.z = current_depth  # Initialize the depth estimate
             self.w = 0  # Initialize the heave estimate
             self.init_p0 = False
 
@@ -558,7 +560,7 @@ class MyPythonNode(Node):
         #################################
 
         self.z_des = self.z_final
-        error = self.z_des - current_data
+        error = self.z_des - current_depth
         correction_depth = self.Kp * error
         
         # Uncomment the following line to maintain the initial depth when depth hold mode was activated
@@ -573,7 +575,7 @@ class MyPythonNode(Node):
         ## set servo depth control here
 
         # Proportional controller
-        error = self.z_des - current_data
+        error = self.z_des - current_depth
         correction_depth = self.Kp * error
         
         # # Proportional controller with floatability compensation
@@ -600,8 +602,6 @@ class MyPythonNode(Node):
         # you supply here the depth but it takes as argument a thrust force in N
         ####################
 
-        self.get_logger().info(f"error: {error:.2f} m")
-        
         correction_depth = self.thrust_to_pwm(correction_depth)
 
         # Send PWM commands to motors in timer
@@ -633,6 +633,9 @@ class MyPythonNode(Node):
         else:
             z_des = self.z_final
             z_dot_des = 0
+
+        self.pub_desired_depth.publish(z_des)
+        self.pub_desired_heave.publish(z_dot_des)
 
         return z_des, z_dot_des
     
