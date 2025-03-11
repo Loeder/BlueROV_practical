@@ -131,7 +131,7 @@ class MyPythonNode(Node):
         self.z_init = 0 # meters
         self.z_final = -0.5 # meters
         self.t_final = 20 # seconds
-        self.z_offset = 0#0.04
+        # self.z_offset = 0.04 # meters
 
         # Create a clock object
         self.clock = self.get_clock()
@@ -524,7 +524,7 @@ class MyPythonNode(Node):
         # Implement the control logic to maintain the vehicle at the same depth  
         # as when depth hold mode was activated (depth_p0).
 
-        current_depth = data.data
+        current_depth = data.data  # Get the current depth from the relative altitude message
 
         current_time = self.clock.now().to_msg().sec + self.clock.now().to_msg().nanosec * 1e-9  # Get current time in seconds
 
@@ -539,14 +539,15 @@ class MyPythonNode(Node):
 
         if (self.init_p0):
             # 1st execution, init
-            self.depth_p0 = current_depth
-            self.z_init = current_depth
+            self.depth_p0 = current_depth # Save the initial depth
+            self.z_init = current_depth - self.depth_p0
             self.initial_time = current_time
             self.integral_error = 0
             self.z = current_depth  # Initialize the depth estimate
             self.w = 0  # Initialize the heave estimate
             self.init_p0 = False
 
+        current_depth -= self.depth_p0  # Subtract the offset to account for the initial depth
 
         #################################
         # Floatability ##################
@@ -571,6 +572,7 @@ class MyPythonNode(Node):
 
         # Uncomment the following line to go to z_final
         self.z_des = self.z_final
+        self.pub_desired_depth.publish(self.z_des)
 
         # Uncomment the following line to use cubic trajectory for depth control
         # self.z_des, w_des = self.cubic_trajectory()
