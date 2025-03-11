@@ -37,6 +37,7 @@ class MyPythonNode(Node):
         self.pub_linear_velocity = self.create_publisher(Twist, 'linear_velocity', 10)
         self.pub_desired_depth = self.create_publisher(Float64, 'z_des', 10)
         self.pub_desired_heave = self.create_publisher(Float64, 'w_des', 10)
+        self.pub_thruster_force = self.create_publisher(Float64, 'thruster_force', 10)
         self.get_logger().info("Publishers created.")
 
         self.get_logger().info("ask router to create endpoint to enable mavlink/from publication.")
@@ -553,8 +554,8 @@ class MyPythonNode(Node):
         # Floatability ##################
         #################################
         
-        # force_per_thruster = self.flotability / 4
-        # correction_depth = self.thrust_to_pwm(force_per_thruster)
+        # correction_force = -1 * self.flotability / 4
+        # correction_depth = self.thrust_to_pwm(correction_force)
 
         #################################
         # P controller ##################
@@ -563,7 +564,60 @@ class MyPythonNode(Node):
         self.z_des = self.z_final
         error = self.z_des - current_depth
         correction_force = self.Kp * error
-        correction_force = self.thrust_to_pwm(correction_force)
+        correction_depth = self.thrust_to_pwm(correction_force)
+
+        ###################################################
+        # P controller w floatability compensation      ###
+        ###################################################
+
+        # self.z_des = self.z_final
+        # error = self.z_des - data
+        # correction_force = self.Kp * error - self.flotability / 4
+        # correction_depth = self.thrust_to_pwm(correction_force)
+
+        ######################################################################
+        # P controller w floatability compensation & cubic trajectory      ###
+        ######################################################################
+
+        # self.z_des, w_des = self.cubic_trajectory()
+        # error = self.z_des - current_depth
+        # correction_force = self.Kp * error - self.flotability / 4
+        # correction_depth = self.thrust_to_pwm(correction_force)
+
+        ######################################################################
+        # PI controller w floatability compensation & cubic trajectory     ###
+        ######################################################################
+
+        # self.z_des, w_des = self.cubic_trajectory()
+        # error = self.z_des - current_depth
+        # self.integral_error += error * dt
+        # correction_force = self.Kp * error - self.flotability / 4 + self.Ki * self.integral_error 
+        # correction_depth = self.thrust_to_pwm(correction_force)
+
+        ##########################################################################################
+        # PID controller w floatability compensation & cubic trajectory & heave estimation  1  ###
+        ##########################################################################################
+
+        # self.z_des, w_des = self.cubic_trajectory()
+        # error = self.z_des - current_depth
+        # self.integral_error += error * dt
+        # self.estimate_heave(dt)
+        # self.derivative_error = w_des - self.w
+        # correction_force = self.Kp * error - self.flotability / 4 + self.Ki * self.integral_error + self.Kd * self.derivative_error
+        # correction_depth = self.thrust_to_pwm(correction_force)
+
+        ##########################################################################################
+        # PID controller w floatability compensation & cubic trajectory & heave estimation  2  ###
+        # (different dt = 58 hz and use current depth instead of random variable)              ###
+        ##########################################################################################
+
+        # self.z_des, w_des = self.cubic_trajectory()
+        # error = self.z_des - current_depth
+        # w_est = self.alpha_beta_filter(current_depth)
+        # self.integral_error += error * dt
+        # correction_force = self.Kp * error - self.flotability / 4 + self.Ki * self.integral_error + self.Kd * (w_des - w_est)
+        # correction_depth = self.thrust_to_pwm(correction_force)
+
 
         #################################
         
@@ -571,8 +625,7 @@ class MyPythonNode(Node):
         # self.z_des = self.depth_p0
 
         # Uncomment the following line to go to z_final
-        self.z_des = self.z_final
-        self.pub_desired_depth.publish(self.z_des)
+        # self.z_des = self.z_final
 
         # Uncomment the following line to use cubic trajectory for depth control
         # self.z_des, w_des = self.cubic_trajectory()
@@ -580,8 +633,8 @@ class MyPythonNode(Node):
         ## set servo depth control here
 
         # Proportional controller
-        error = self.z_des - current_depth
-        correction_force = self.Kp * error
+        # error = self.z_des - current_depth
+        # correction_force = self.Kp * error
         
         # # Proportional controller with floatability compensation
         # error = self.z_des - data
@@ -603,16 +656,16 @@ class MyPythonNode(Node):
 
         # update Correction_depth
 
-        #####################
-        # you supply here the depth but it takes as argument a thrust force in N
-        ####################
 
-        self.get_logger().info(f"error: {error:.2f} m")
+        # self.get_logger().info(f"error: {error:.2f} m")
         
-        correction_depth = self.thrust_to_pwm(correction_force)
+        # correction_depth = self.thrust_to_pwm(correction_force)
 
         # Send PWM commands to motors in timer
         self.Correction_depth = correction_depth
+
+        # Publish force per thruster information
+        self.pub_thruster_force.publish(correction_force)
 
     def cubic_trajectory(self):
         """
@@ -645,6 +698,41 @@ class MyPythonNode(Node):
         self.pub_desired_heave.publish(z_dot_des)
 
         return z_des, z_dot_des
+    
+    def alpha_beta_filter(self, z_measurment):
+        """
+        Estimate the heave (vertical motion) of the ROV based on the time delta dt.
+        This function updates the depth and heave estimates using an alpha-beta filter
+        and publishes the estimated heave velocity and depth.
+        Args:
+            dt (float): The time delta since the last update. If dt is zero or None,
+                        the function will return immediately without updating.
+        Returns:
+            None
+        """
+        
+        dt = 1 / 58 # 58 Hz
+        
+        # Generate a random input signal for testing
+        # xm = random.randint(0, 99)
+
+        # Update depth and heave estimates
+        self.z += self.w * dt  # Update depth estimate
+
+        r = z_measurment - self.z  # Calculate residual
+
+        self.z += self.alpha * r  # Update depth estimate with residual correction
+        self.w += (self.beta * r) / dt  # Update heave estimate with residual correction
+
+        # Publish the estimated heave velocity
+        Vel = Twist()
+        Vel.linear.z = self.w
+        self.pub_linear_velocity.publish(Vel)
+
+        # Publish the estimated depth
+        self.pub_depth.publish(self.z)
+
+        return self.w
     
     def estimate_heave(self, dt):
         """
