@@ -75,6 +75,10 @@ class MyPythonNode(Node):
 
         self.Vmax_mot = 1900
         self.Vmin_mot = 1100
+
+        ##########################
+        # What are those values? #
+        ##########################
         
         #light values 
         self.light_pin = 13.0  # float between 0 and 15
@@ -100,24 +104,32 @@ class MyPythonNode(Node):
         
         ## TODO ##
         # Task 1 : Calculate the flotability of the ROV
-        self.flotability = 0
+        # self.flotability = 0.175 * 0.04**2 * math.pi * 10 * 1000 #  8. 8N
+        self.flotability = 11
 
         # PID control parameters
-        self.Kp = 0.1
+        self.Kp = 10 #13.75
         self.Ki = 0
         self.Kd = 0
         self.integral_error = 0
 
+        # # PWM to thrust conversion parameters
+        # self.pwm_pos_intercept = 1541.31
+        # self.pwm_pos_slope = 10.38
+        # self.pwm_neg_intercept = 1433.68
+        # self.pwn_neg_slope = 11.88
+
         # PWM to thrust conversion parameters
-        self.pwm_pos_intercept = 1541.31
-        self.pwm_pos_slope = 10.38
-        self.pwm_neg_intercept = 1433.68
-        self.pwn_neg_slope = 11.88
+        self.pwm_pos_intercept = 1532.00
+        self.pwm_pos_slope = 9.91
+        self.pwm_neg_intercept = 1464.00
+        self.pwn_neg_slope = 12.34
 
         # Cubic trajectory parameters
         self.z_init = 0 # meters
-        self.z_final = 0.5 # meters
+        self.z_final = -0.5 # meters
         self.t_final = 20 # seconds
+        self.z_offset = 0#0.04
 
         # Create a clock object
         self.clock = self.get_clock()
@@ -133,6 +145,10 @@ class MyPythonNode(Node):
         self.w = 0
         self.alpha = 0.1
         self.beta = 0.005
+
+    ##########################
+    # Is this Mahmouds function? #
+    ##########################
         
     def initialization_test(self):
         """Tests the light by flashing it and tests the camera servo by moving it to max/min limits before starting the sytsem."""
@@ -162,6 +178,10 @@ class MyPythonNode(Node):
         self.send_servo_comand(self.camera_servo_pin, self.tilt)
         
         self.get_logger().info("Light and camera servo test completed.")  
+
+    ##########################
+    # What does this do? #
+    ##########################    
         
     def send_servo_comand(self, pin_number, value):
         '''
@@ -211,6 +231,11 @@ class MyPythonNode(Node):
             pass
 
     def armDisarm(self, armed):
+
+        ##########################
+        # Why ? #
+        ##########################
+
         """Arms or disarms the vehicle motors using MAVROS command 400."""
         cli = self.create_client(CommandLong, 'cmd/command')  # Create MAVROS service client
         result = False
@@ -497,6 +522,8 @@ class MyPythonNode(Node):
         # Implement the control logic to maintain the vehicle at the same depth  
         # as when depth hold mode was activated (depth_p0).
 
+        current_data = data.data
+
         current_time = self.clock.now().to_msg().sec + self.clock.now().to_msg().nanosec * 1e-9  # Get current time in seconds
 
         # Calculate the time difference between the current and last received relative altitude messages for integral control
@@ -504,31 +531,50 @@ class MyPythonNode(Node):
         if self.last_rel_alt_time is not None:
             dt = current_time - self.last_rel_alt_time
             sampling_rate = 1.0 / dt
-            self.get_logger().info(f"Sampling rate: {sampling_rate:.2f} Hz")
+            # self.get_logger().info(f"Sampling rate: {sampling_rate:.2f} Hz")
 
         self.last_rel_alt_time = current_time  # Update the last received time
 
         if (self.init_p0):
             # 1st execution, init
-            self.depth_p0 = data
-            self.z_init = data
+            self.depth_p0 = current_data
+            self.z_init = current_data
             self.initial_time = current_time
             self.integral_error = 0
-            self.z = data  # Initialize the depth estimate
+            self.z = current_data  # Initialize the depth estimate
             self.w = 0  # Initialize the heave estimate
             self.init_p0 = False
+
+
+        #################################
+        # Floatability ##################
+        #################################
+        
+        # force_per_thruster = self.flotability / 4
+        # correction_depth = self.thrust_to_pwm(force_per_thruster)
+
+        #################################
+        # P controller ##################
+        #################################
+
+        self.z_des = self.z_final
+        error = self.z_des - current_data
+        correction_depth = self.Kp * error
         
         # Uncomment the following line to maintain the initial depth when depth hold mode was activated
         # self.z_des = self.depth_p0
 
+        # Uncomment the following line to go to z_final
+        self.z_des = self.z_final
+
         # Uncomment the following line to use cubic trajectory for depth control
-        self.z_des, w_des = self.cubic_trajectory()
+        # self.z_des, w_des = self.cubic_trajectory()
 
         ## set servo depth control here
 
-        # # Proportional controller
-        # error = self.z_des - data
-        # correction_depth = self.Kp * error
+        # Proportional controller
+        error = self.z_des - current_data
+        correction_depth = self.Kp * error
         
         # # Proportional controller with floatability compensation
         # error = self.z_des - data
@@ -539,16 +585,23 @@ class MyPythonNode(Node):
         # self.integral_error += error * dt
         # correction_depth = self.Kp * error + self.Ki * self.integral_error + self.flotability
 
-        # Estimate the heave velocity using alpha-beta filter
-        self.estimate_heave(dt)
+        # # Estimate the heave velocity using alpha-beta filter
+        # self.estimate_heave(dt)
 
-        # PID controller
-        error = self.z_des - data
-        self.integral_error += error * dt
-        self.derivative_error = w_des - self.w
-        correction_depth = self.Kp * error + self.Ki * self.integral_error + self.Kd * self.derivative_error + self.flotability
+        # # PID controller
+        # error = self.z_des - data
+        # self.integral_error += error * dt
+        # self.derivative_error = w_des - self.w
+        # correction_depth = self.Kp * error + self.Ki * self.integral_error + self.Kd * self.derivative_error + self.flotability
 
         # update Correction_depth
+
+        #####################
+        # you supply here the depth but it takes as argument a thrust force in N
+        ####################
+
+        self.get_logger().info(f"error: {error:.2f} m")
+        
         correction_depth = self.thrust_to_pwm(correction_depth)
 
         # Send PWM commands to motors in timer
