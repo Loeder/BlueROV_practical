@@ -601,7 +601,7 @@ class MyPythonNode(Node):
         # self.z_des, w_des = self.cubic_trajectory()
         # error = self.z_des - current_depth
         # self.integral_error += error * dt
-        # self.estimate_heave(dt)
+        # self.estimate_heave(current_depth, dt)
         # self.derivative_error = w_des - self.w
         # correction_force = self.Kp * error - self.flotability / 4 + self.Ki * self.integral_error + self.Kd * self.derivative_error
         # correction_depth = self.thrust_to_pwm(correction_force)
@@ -646,7 +646,7 @@ class MyPythonNode(Node):
         # correction_force = self.Kp * error + self.Ki * self.integral_error + self.flotability
 
         # # Estimate the heave velocity using alpha-beta filter
-        # self.estimate_heave(dt)
+        # self.estimate_heave(current_depth, dt)
 
         # # PID controller
         # error = self.z_des - data
@@ -699,7 +699,7 @@ class MyPythonNode(Node):
 
         return z_des, z_dot_des
     
-    def alpha_beta_filter(self, z_measurment):
+    def alpha_beta_filter(self, z_measurement):
         """
         Estimate the heave (vertical motion) of the ROV based on the time delta dt.
         This function updates the depth and heave estimates using an alpha-beta filter
@@ -719,7 +719,7 @@ class MyPythonNode(Node):
         # Update depth and heave estimates
         self.z += self.w * dt  # Update depth estimate
 
-        r = z_measurment - self.z  # Calculate residual
+        r = z_measurement - self.z  # Calculate residual
 
         self.z += self.alpha * r  # Update depth estimate with residual correction
         self.w += (self.beta * r) / dt  # Update heave estimate with residual correction
@@ -734,7 +734,7 @@ class MyPythonNode(Node):
 
         return self.w
     
-    def estimate_heave(self, dt):
+    def estimate_heave(self, z_measurement, dt):
         """
         Estimate the heave (vertical motion) of the ROV based on the time delta dt.
         This function updates the depth and heave estimates using an alpha-beta filter
@@ -747,14 +747,11 @@ class MyPythonNode(Node):
         """
         if not dt:
             return
-        
-        # Generate a random input signal for testing
-        xm = random.randint(0, 99)
 
         # Update depth and heave estimates
         self.z += self.w * dt  # Update depth estimate
 
-        r = xm - self.z  # Calculate residual
+        r = z_measurement - self.z  # Calculate residual
 
         self.z += self.alpha * r  # Update depth estimate with residual correction
         self.w += (self.beta * r) / dt  # Update heave estimate with residual correction
