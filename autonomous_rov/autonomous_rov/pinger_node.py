@@ -10,7 +10,7 @@ class PingNode(Node):
     def __init__(self, ping):
         super().__init__('pinger_node')
         self.ping = ping
-        self.data_pub = self.create_publisher(Float64MultiArray, '/ping/data', 10)
+        self.data_pub = self.create_publisher(Float64MultiArray, 'bluerov2/ping/data', 10)
         self.timer = self.create_timer(0.1, self.timer_callback)  # 10 Hz
 
     def timer_callback(self):

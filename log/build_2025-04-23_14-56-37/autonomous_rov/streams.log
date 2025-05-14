@@ -1,0 +1,30 @@
+[0.765s] Invoking command in '/home/loeder/Documents/BlueRov/bluerov_ws/src/autonomous_rov': PYTHONPATH=/home/loeder/Documents/BlueRov/bluerov_ws/src/build/autonomous_rov/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/loeder/Documents/BlueRov/bluerov_ws/src/install/autonomous_rov/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../build/autonomous_rov build --build-base /home/loeder/Documents/BlueRov/bluerov_ws/src/build/autonomous_rov/build install --record /home/loeder/Documents/BlueRov/bluerov_ws/src/build/autonomous_rov/install.log --single-version-externally-managed install_data
+[0.971s] running egg_info
+[0.972s] writing ../build/autonomous_rov/autonomous_rov.egg-info/PKG-INFO
+[0.972s] writing dependency_links to ../build/autonomous_rov/autonomous_rov.egg-info/dependency_links.txt
+[0.972s] writing entry points to ../build/autonomous_rov/autonomous_rov.egg-info/entry_points.txt
+[0.972s] writing requirements to ../build/autonomous_rov/autonomous_rov.egg-info/requires.txt
+[0.972s] writing top-level names to ../build/autonomous_rov/autonomous_rov.egg-info/top_level.txt
+[0.974s] reading manifest file '../build/autonomous_rov/autonomous_rov.egg-info/SOURCES.txt'
+[0.976s] writing manifest file '../build/autonomous_rov/autonomous_rov.egg-info/SOURCES.txt'
+[0.976s] running build
+[0.976s] running build_py
+[0.976s] copying autonomous_rov/image_processing_tracker_DUNE.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/build/autonomous_rov/build/lib/autonomous_rov
+[0.977s] running install
+[0.977s] running install_lib
+[0.979s] copying /home/loeder/Documents/BlueRov/bluerov_ws/src/build/autonomous_rov/build/lib/autonomous_rov/image_processing_tracker_DUNE.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/install/autonomous_rov/lib/python3.10/site-packages/autonomous_rov
+[0.980s] byte-compiling /home/loeder/Documents/BlueRov/bluerov_ws/src/install/autonomous_rov/lib/python3.10/site-packages/autonomous_rov/image_processing_mir_ROS1.py to image_processing_mir_ROS1.cpython-310.pyc
+[0.980s] Sorry: TabError: inconsistent use of tabs and spaces in indentation (image_processing_mir_ROS1.py, line 23)
+[0.980s] byte-compiling /home/loeder/Documents/BlueRov/bluerov_ws/src/install/autonomous_rov/lib/python3.10/site-packages/autonomous_rov/image_processing_tracker_DUNE.py to image_processing_tracker_DUNE.cpython-310.pyc
+[0.981s] running install_data
+[0.981s] copying launch/run_video.launch -> /home/loeder/Documents/BlueRov/bluerov_ws/src/install/autonomous_rov/share/autonomous_rov/launch
+[0.982s] running install_egg_info
+[0.983s] removing '/home/loeder/Documents/BlueRov/bluerov_ws/src/install/autonomous_rov/lib/python3.10/site-packages/autonomous_rov-0.0.0-py3.10.egg-info' (and everything under it)
+[0.984s] Copying ../build/autonomous_rov/autonomous_rov.egg-info to /home/loeder/Documents/BlueRov/bluerov_ws/src/install/autonomous_rov/lib/python3.10/site-packages/autonomous_rov-0.0.0-py3.10.egg-info
+[0.984s] running install_scripts
+[1.002s] Installing image_processing_tracker script to /home/loeder/Documents/BlueRov/bluerov_ws/src/install/autonomous_rov/lib/autonomous_rov
+[1.002s] Installing listenerMIR script to /home/loeder/Documents/BlueRov/bluerov_ws/src/install/autonomous_rov/lib/autonomous_rov
+[1.002s] Installing pinger_node script to /home/loeder/Documents/BlueRov/bluerov_ws/src/install/autonomous_rov/lib/autonomous_rov
+[1.002s] Installing video script to /home/loeder/Documents/BlueRov/bluerov_ws/src/install/autonomous_rov/lib/autonomous_rov
+[1.002s] writing list of installed files to '/home/loeder/Documents/BlueRov/bluerov_ws/src/build/autonomous_rov/install.log'
+[1.052s] Invoked command in '/home/loeder/Documents/BlueRov/bluerov_ws/src/autonomous_rov' returned '0': PYTHONPATH=/home/loeder/Documents/BlueRov/bluerov_ws/src/build/autonomous_rov/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/loeder/Documents/BlueRov/bluerov_ws/src/install/autonomous_rov/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../build/autonomous_rov build --build-base /home/loeder/Documents/BlueRov/bluerov_ws/src/build/autonomous_rov/build install --record /home/loeder/Documents/BlueRov/bluerov_ws/src/build/autonomous_rov/install.log --single-version-externally-managed install_data

@@ -75,18 +75,18 @@ class Ping1dComponent(Node):
     
     test_usb = False
     if (test_usb):
-    	self.port = "/dev/ttyUSB0"
-    	self.baudrate = 115200
-    	self.ping.connect_serial(self.port, self.baudrate)
+        self.port = "/dev/ttyUSB0"
+        self.baudrate = 115200
+        self.ping.connect_serial(self.port, self.baudrate)
     else:
-    	self.host = "192.168.2.2"
-    	self.port = "9090"
-    	self.ping.connect_udp(self.host, int(self.port))
+        self.host = "192.168.2.2"
+        self.port = "9090"
+        self.ping.connect_udp(self.host, int(self.port))
 
 
     if self.ping.initialize() is False:
-      print("Failed to initialize Ping!")
-      exit(1)
+        print("Failed to initialize Ping!")
+        exit(1)
 
     ### Set Initial parameter
     # self.id = self.ping.get_device_id()
