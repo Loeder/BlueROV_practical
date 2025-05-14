@@ -5,7 +5,6 @@ import traceback
 import numpy as np
 import math
 from rclpy.node import Node
-from rclpy.time import Time
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 from struct import pack, unpack
 from std_msgs.msg import Int16, Float64, Empty, Float64MultiArray, String
@@ -14,25 +13,14 @@ from mavros_msgs.srv import CommandLong, SetMode, StreamRate
 from mavros_msgs.msg import OverrideRCIn, Mavlink
 from mavros_msgs.srv import EndpointAdd
 from geometry_msgs.msg import Twist
-from time import sleep
-import random
+
 
 # from waterlinked_a50_ros_driver.msg import DVL
 # from waterlinked_a50_ros_driver.msg import DVLBeam
 
 class MyPythonNode(Node):
     def __init__(self):
-        super().__init__("listenerMIR_visual_servoing")
-
-        ### servoing ###
-        self.Z = 1
-        self.last_error_vs = np.array([0.0, 0.0])
-        self.last_time = self.get_clock().now()
-        #############
-        
-        self.declare_parameter("run_initialization_test", False)
-        self.run_initialization_test = self.get_parameter("run_initialization_test").value
-        
+        super().__init__("listenerMIR")
         self.get_logger().info("This node is named listenerMIR")
 
         self.ns = self.get_namespace()
@@ -42,11 +30,9 @@ class MyPythonNode(Node):
         self.pub_depth = self.create_publisher(Float64, 'depth', 10)
         self.pub_angular_velocity = self.create_publisher(Twist, 'angular_velocity', 10)
         self.pub_linear_velocity = self.create_publisher(Twist, 'linear_velocity', 10)
-        self.pub_robot_velocity = self.create_publisher(Twist, 'robot_velocity', 10)
-        self.pub_depth_Z_estimated = self.create_publisher(Float64, 'depth_Z_estimated', 10)
-        self.pub_cam_velocity = self.create_publisher(Twist, 'cam_velocity', 10)
-        self.pub_error_vs = self.create_publisher(Float64MultiArray, 'error_vs', 10)
-        self.get_logger().info("Publishers created.")
+        self.get_logger().info("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        self.pub_state_FSM = self.create_publisher(Float64, 'state_FSM', 10)
+        self.get_logger().info("Publishers created!!!!!!!!!!!!!!.")
 
         self.get_logger().info("ask router to create endpoint to enable mavlink/from publication.")
         # self.addEndPoint()
@@ -79,247 +65,128 @@ class MyPythonNode(Node):
         self.angle_yaw_a0 = 0.0
         self.depth_wrt_startup = 0
         self.depth_p0 = 0
-        self.z_des = self.depth_p0
 
         self.pinger_confidence = 0
         self.pinger_distance = 0
 
+        ### Free Path Practical
+        self.state = 1
+        self.free_path_yaw_PMW = 1500
+        self.free_path_surge_PMW = 1500
+        self.Euler_angle_z = 0
+        self.first_time = True
+
         self.Vmax_mot = 1900
         self.Vmin_mot = 1100
 
-        ##########################
-        # What are those values? #
-        ##########################
-        
-        #light values 
-        self.light_pin = 13.0  # float between 0 and 15
-        self.light_max = 1900.0
-        self.light_min = 1100.0
-        self.light = 1100.0
-        self.light_int = 1100.0
-        
-        # camera servo 
-        self.camera_servo_pin = 15.0 # float between 0 and 15
-        self.servo_max = 1850.0
-        self.servo_min = 1100.0
-        self.tilt_int = 1450.0
-        self.tilt = 1450.0
-
-        ## Intail test for the system
-        if self.run_initialization_test:
-            self.initialization_test()
-        
         # corrections for control
         self.Correction_yaw = 1500
         self.Correction_depth = 1500
-        
-        ## TODO ##
-        # Task 1 : Calculate the floatability of the ROV
-        # self.floatability = 0.175 * 0.04**2 * math.pi * 10 * 1000 #  8. 8N
-        self.floatability = 11 
 
-        # PID control parameters
-        self.Kp = 10 #13.75
-        self.Ki = 0
-        self.Kd = 0
-        self.integral_error = 0
+    ######################################################################
+    ######### This function if you press (A) you get into set_mode[2] ####
+    ######################################################################
 
-        # # PWM to thrust conversion parameters
-        # self.pwm_pos_intercept = 1541.31
-        # self.pwm_pos_slope = 10.38
-        # self.pwm_neg_intercept = 1433.68
-        # self.pwn_neg_slope = 11.88
-
-        # PWM to thrust conversion parameters
-        self.pwm_pos_intercept = 1532.00
-        self.pwm_pos_slope = 9.91
-        self.pwm_neg_intercept = 1464.00
-        self.pwn_neg_slope = 12.34
-
-        # Cubic trajectory parameters
-        self.z_init = 0 # meters
-        self.z_final = -0.5 # meters
-        self.t_final = 20 # seconds
-        self.z_offset = 0#0.04
-
-        # Create a clock object
-        self.clock = self.get_clock()
-        
-        # Initialize the initial time
-        self.initial_time = self.clock.now().to_msg().sec
-
-        # Initialize the last received time for the relative altitude callback
-        self.last_rel_alt_time = None
-
-        # Initialize the state and velocity estimates
-        self.z = 0
-        self.w = 0
-        self.alpha = 0.1
-        self.beta = 0.005
-
-        self.tracked_point = [0, 0]
-        self.desired_point = [0, 0]
-
-        self.vrobot_vs = [0, 0, 0, 0, 0, 0]  # [surge, sway, heave, roll, pitch, yaw]
-
-    ##########################
-    # Is this Mahmouds function? #
-    ##########################
-        
-    def initialization_test(self):
-        """Tests the light by flashing it and tests the camera servo by moving it to max/min limits before starting the sytsem."""
-        self.get_logger().info("Testing light and camera servo...")
-
-        # Flash the light
-        self.light = self.light_int
-        self.send_servo_comand(self.light_pin, self.light)
-        sleep(0.5)
-        self.light = self.light_max
-        self.send_servo_comand(self.light_pin, self.light)
-        sleep(0.5)
-        self.light = self.light_min
-        self.send_servo_comand(self.light_pin, self.light)
-
-        # Move the camera servo to max and min
-        self.tilt = self.tilt_int
-        self.send_servo_comand(self.camera_servo_pin, self.tilt)
-        sleep(0.5)
-        self.tilt = self.servo_max
-        self.send_servo_comand(self.camera_servo_pin, self.tilt)
-        sleep(0.5)
-        self.tilt = self.servo_min
-        self.send_servo_comand(self.camera_servo_pin, self.tilt)
-        sleep(0.5)
-        self.tilt = self.tilt_int  # Reset camera tilt to neutral
-        self.send_servo_comand(self.camera_servo_pin, self.tilt)
-        
-        self.get_logger().info("Light and camera servo test completed.")  
-
-    ##########################
-    # What does this do? #
-    ##########################    
-        
-    def send_servo_comand(self, pin_number, value):
-        '''
-        Sends a command to the navigator to adjust servo pins pwm using Mavros service
-        pin_number (float) --> the servo number in the navigator board (13 for lights and 15 for camera servo)
-        value (float) --> The pwm value sent to the servo between 1100 and 1900
-        '''
-        client = self.create_client(CommandLong, 'cmd/command')
-        result = False
-        while not result:
-                result = client.wait_for_service(timeout_sec=4.0)
-        # Create a request object for CommandLong service
-        request = CommandLong.Request()
-
-        # Set the parameters for the command (command 183: MAV_CMD_DO_SET_SERVO)
-        request.command = 183       # Command 183: MAV_CMD_DO_SET_SERVO
-        request.param1 = pin_number           # Servo number (param1)
-        request.param2 = value         # Desired servo position (param2)
-        request.param3 = 0.0             
-        request.param4 = 0.0             
-
-        # Send the service request and wait for the response
-        future = client.call_async(request)
-
-        # Check the result
-        if future.result() is not None:
-            self.get_logger().info('Change Completed')
-        else:
-            self.get_logger().error('Failed to preform the change ')
-        
-    
-            
     def timer_callback(self):
-        '''
-        Time step at a fixed rate (1 / timer_period = 20 Hz) to execute control logic.
-        '''
+        # msg = String()
+        # msg.data = 'Hello World: %d' % self.i
+        # self.publisher_.publish(msg)
+        # self.get_logger().info('Publishing: "%s"' % msg.data)
+        # self.i += 1
+
         if self.set_mode[0]:  # commands sent inside joyCallback()
             return
-        elif self.set_mode[
-            1]:  # Arbitrary velocity command can be defined here to observe robot's velocity, zero by default
+        elif self.set_mode[1]:  # Arbitrary velocity command can be defined here to observe robot's velocity, zero by default
             self.setOverrideRCIN(1500, 1500, 1500, 1500, 1500, 1500)
             return
         elif self.set_mode[2]:
             # send commands in correction mode
             # self.setOverrideRCIN(1500, 1500, self.Correction_depth, self.Correction_yaw, 1500, 1500)
-            surge = self.thrust_to_pwm(self.vrobot_vs[0])
-            sway = self.thrust_to_pwm(self.vrobot_vs[1])
-            heave = self.thrust_to_pwm(self.vrobot_vs[2])
-            roll = self.thrust_to_pwm(self.vrobot_vs[3])
-            pitch = self.thrust_to_pwm(self.vrobot_vs[4])
-            yaw = self.thrust_to_pwm(self.vrobot_vs[5])
-            # Send PWM commands to motors
-            self.setOverrideRCIN(pitch, roll, heave, yaw, surge, sway)
+            self.setOverrideRCIN(1500, 1500, 1500, self.free_path_yaw_PMW, self.free_path_surge_PMW, 1500)
         else:  # normally, never reached
             pass
 
     def armDisarm(self, armed):
+        # This functions sends a long command service with 400 code to arm or disarm motors
+        if (armed):
+            traceback_logger = rclpy.logging.get_logger('node_class_traceback_logger')
+            cli = self.create_client(CommandLong, 'cmd/command')
+            result = False
+            while not result:
+                result = cli.wait_for_service(timeout_sec=4.0)
+                self.get_logger().info("arming requested, wait_for_service, timeout, result :" + str(result))
+            req = CommandLong.Request()
+            req.broadcast = False
+            req.command = 400
+            req.confirmation = 0
+            req.param1 = 1.0
+            req.param2 = 0.0
+            req.param3 = 0.0
+            req.param4 = 0.0
+            req.param5 = 0.0
+            req.param6 = 0.0
+            req.param7 = 0.0
+            self.get_logger().info("just before call_async")
+            resp = cli.call_async(req)
+            self.get_logger().info("just after call_async")
+            # rclpy.spin_until_future_complete(self, resp)
+            self.get_logger().info("Arming Succeeded")
+        else:
+            traceback_logger = rclpy.logging.get_logger('node_class_traceback_logger')
+            cli = self.create_client(CommandLong, 'cmd/command')
+            result = False
+            while not result:
+                result = cli.wait_for_service(timeout_sec=4.0)
+                self.get_logger().info(
+                    "disarming requested, wait_for_service, (False if timeout) result :" + str(result))
+            req = CommandLong.Request()
+            req.broadcast = False
+            req.command = 400
+            req.confirmation = 0
+            req.param1 = 0.0
+            req.param2 = 0.0
+            req.param3 = 0.0
+            req.param4 = 0.0
+            req.param5 = 0.0
+            req.param6 = 0.0
+            req.param7 = 0.0
+            resp = cli.call_async(req)
+            # rclpy.spin_until_future_complete(self, resp)
+            self.get_logger().info("Disarming Succeeded")
 
-        ##########################
-        # Why ? #
-        ##########################
+    def manageStabilize(self, stabilized):
+        # This functions sends a SetMode command service to stabilize or reset
+        if (stabilized):
+            traceback_logger = rclpy.logging.get_logger('node_class_traceback_logger')
+            cli = self.create_client(SetMode, 'set_mode')
+            result = False
+            while not result:
+                result = cli.wait_for_service(timeout_sec=4.0)
+                self.get_logger().info(
+                    "stabilized mode requested, wait_for_service, (False if timeout) result :" + str(result))
+            req = SetMode.Request()
+            req.base_mode = 0
+            req.custom_mode = "0"
+            resp = cli.call_async(req)
+            # rclpy.spin_until_future_complete(self, resp)
+            self.get_logger().info("set mode to STABILIZE Succeeded")
 
-        """Arms or disarms the vehicle motors using MAVROS command 400."""
-        cli = self.create_client(CommandLong, 'cmd/command')  # Create MAVROS service client
-        result = False
-        while not result:
-            result = cli.wait_for_service(timeout_sec=4.0)  # Wait for service to be available
-            self.get_logger().info(f"{'Arming' if armed else 'Disarming'} requested, waiting for service: {result}")
-        
-        # Create request object for arming/disarming
-        req = CommandLong.Request()
-        req.broadcast = False  # Command is not broadcasted
-        req.command = 400  # MAV_CMD_COMPONENT_ARM_DISARM
-        req.confirmation = 0  # No confirmation required
-        req.param1 = 1.0 if armed else 0.0  # 1.0 = Arm, 0.0 = Disarm
-        req.param2 = 0.0  
-        req.param3 = 0.0  
-        req.param4 = 0.0  
-        req.param5 = 0.0  
-        req.param6 = 0.0  
-        req.param7 = 0.0 
-        
-        self.get_logger().info("Sending command...")
-        resp = cli.call_async(req)  # Send command asynchronously
-        
-        # Log the result
-        self.get_logger().info(f"{'Arming' if armed else 'Disarming'} Succeeded")
-
-    # def manageStabilize(self, stabilized):
-    #     # This functions sends a SetMode command service to stabilize or reset
-    #     if (stabilized):
-    #         traceback_logger = rclpy.logging.get_logger('node_class_traceback_logger')
-    #         cli = self.create_client(SetMode, 'set_mode')
-    #         result = False
-    #         while not result:
-    #             result = cli.wait_for_service(timeout_sec=4.0)
-    #             self.get_logger().info(
-    #                 "stabilized mode requested, wait_for_service, (False if timeout) result :" + str(result))
-    #         req = SetMode.Request()
-    #         req.base_mode = 0
-    #         req.custom_mode = "0"
-    #         resp = cli.call_async(req)
-    #         # rclpy.spin_until_future_complete(self, resp)
-    #         self.get_logger().info("set mode to STABILIZE Succeeded")
-
-    #     else:
-    #         traceback_logger = rclpy.logging.get_logger('node_class_traceback_logger')
-    #         result = False
-    #         cli = self.create_client(SetMode, 'set_mode')
-    #         while not result:
-    #             result = cli.wait_for_service(timeout_sec=4.0)
-    #             self.get_logger().info(
-    #                 "manual mode requested, wait_for_service, (False if timeout) result :" + str(result))
-    #         req = SetMode.Request()
-    #         req.base_mode = 0
-    #         req.custom_mode = "19"
-    #         resp = cli.call_async(req)
-    #         # rclpy.spin_until_future_complete(self, resp)
-    #         self.get_logger().info("set mode to MANUAL Succeeded")
+        else:
+            traceback_logger = rclpy.logging.get_logger('node_class_traceback_logger')
+            result = False
+            cli = self.create_client(SetMode, 'set_mode')
+            while not result:
+                result = cli.wait_for_service(timeout_sec=4.0)
+                self.get_logger().info(
+                    "manual mode requested, wait_for_service, (False if timeout) result :" + str(result))
+            req = SetMode.Request()
+            req.base_mode = 0
+            req.custom_mode = "19"
+            resp = cli.call_async(req)
+            # rclpy.spin_until_future_complete(self, resp)
+            self.get_logger().info("set mode to MANUAL Succeeded")
 
     def setStreamRate(self, rate):
-        ''' Set the Mavros rate for reading the senosor data'''
         traceback_logger = rclpy.logging.get_logger('node_class_traceback_logger')
         cli = self.create_client(StreamRate, 'set_stream_rate')
         result = False
@@ -335,37 +202,29 @@ class MyPythonNode(Node):
         rclpy.spin_until_future_complete(self, resp)
         self.get_logger().info("set stream rate Succeeded")
 
-    # def addEndPoint(self):
-    #     traceback_logger = rclpy.logging.get_logger('node_class_traceback_logger')
-    #     cli = self.create_client(EndpointAdd, 'mavros_router/add_endpoint')
-    #     result = False
-    #     while not result:
-    #         result = cli.wait_for_service(timeout_sec=4.0)
-    #         self.get_logger().info(
-    #             "add endpoint requesRelAltCallbackted, wait_for_service, (False if timeout) result :" + str(result))
+    def addEndPoint(self):
+        traceback_logger = rclpy.logging.get_logger('node_class_traceback_logger')
+        cli = self.create_client(EndpointAdd, 'mavros_router/add_endpoint')
+        result = False
+        while not result:
+            result = cli.wait_for_service(timeout_sec=4.0)
+            self.get_logger().info(
+                "add endpoint requesRelAltCallbackted, wait_for_service, (False if timeout) result :" + str(result))
 
-    #     req = EndpointAdd.Request()
-    #     req.url = "udp://@localhost"
-    #     req.type = 1  # TYPE_GCS
-    #     resp = cli.call_async(req)
-    #     rclpy.spin_until_future_complete(self, resp)
-    #     self.get_logger().info("add endpoint rate Succeeded")
+        req = EndpointAdd.Request()
+        req.url = "udp://@localhost"
+        req.type = 1  # TYPE_GCS
+        resp = cli.call_async(req)
+        rclpy.spin_until_future_complete(self, resp)
+        self.get_logger().info("add endpoint rate Succeeded")
 
     def joyCallback(self, data):
-        ''' Map the Joystick buttons according the bluerov configuration as descriped at
-        https://bluerobotics.com/wp-content/uploads/2023/02/default-button-layout-xbox.jpg
-        **Note: the lights are set to be in RT and LT button instead of the cross buttons'''
+        # Joystick buttons
         btn_arm = data.buttons[7]  # Start button
         btn_disarm = data.buttons[6]  # Back button
         btn_manual_mode = data.buttons[3]  # Y button
         btn_automatic_mode = data.buttons[2]  # X button
         btn_corrected_mode = data.buttons[0]  # A button
-        btn_camera_servo_up = data.buttons[4] # LB button 
-        btn_camera_servo_down = data.buttons[5] # RB button 
-        btn_camera_rest = data.buttons[9] # R3 button 
-        btn_light_down = data.axes[2] # LT button
-        btn_light_up = data.axes[5] # RT button
-        
 
         # Disarming when Back button is pressed
         if (btn_disarm == 1 and self.arming == True):
@@ -383,6 +242,8 @@ class MyPythonNode(Node):
             self.set_mode[1] = False
             self.set_mode[2] = False
             self.get_logger().info("Mode manual")
+            ### Free path
+            self.first_time = True
         if (btn_automatic_mode and not self.set_mode[1]):
             self.set_mode[0] = False
             self.set_mode[1] = True
@@ -391,45 +252,16 @@ class MyPythonNode(Node):
         if (btn_corrected_mode and not self.set_mode[2]):
             self.init_a0 = True
             self.init_p0 = True
+            ### Free path
+            self.Euler_z_initial = self.Euler_angle_z       # Set initial value of heading
             # set sum errors to 0 here, ex: Sum_Errors_Vel = [0]*3
             self.set_mode[0] = False
             self.set_mode[1] = False
             self.set_mode[2] = True
             self.get_logger().info("Mode correction")
-            
-        
-        #### Control light intensity####
-        if (btn_light_up == -1 and self.light < self.light_max):
-            self.light = min(self.light + 100.0, self.light_max)
-            self.send_servo_comand(self.light_pin,self.light)
-            self.get_logger().info(f"light PWM is: {self.light}")
-            
-        elif (btn_light_down == -1 and self.light > self.light_min):
-            self.light = max(self.light_min,self.light - 100)
-            self.send_servo_comand(self.light_pin,self.light)
-            self.get_logger().info(f"light PWM is: {self.light}")
-
-        ### Control Camera tilt angle ###
-        if (btn_camera_servo_up and not btn_camera_servo_down and self.tilt < self.servo_max):
-            self.tilt = min(self.servo_max, self.tilt + 100)
-            self.send_servo_comand(self.camera_servo_pin, self.tilt)
-            self.get_logger().info(f"tilt pwm: {self.tilt}")
-            
-        elif (btn_camera_servo_down and self.tilt > self. servo_min):
-            self.tilt = max(self.servo_min, self.tilt - 100)
-            self.send_servo_comand(self.camera_servo_pin, self.tilt)
-            self.get_logger().info(f"tilt pwm: {self.tilt}")
-            
-        elif (btn_camera_rest):
-            self.tilt = self.tilt_int
-            self.send_servo_comand(self.camera_servo_pin,self.tilt)
-            self.get_logger().info(f"Camera tilt has been reseted")
-            
-            
-            
 
     def velCallback(self, cmd_vel):
-        ''' Used in manual mode to read the values of the analog and map it pwm then send it the thrusters'''
+        # Only continue if manual_mode is enabled
         if (self.set_mode[1] or self.set_mode[2]):
             return
         else:
@@ -442,17 +274,15 @@ class MyPythonNode(Node):
         forward_reverse = self.mapValueScalSat(cmd_vel.linear.x)
         lateral_left_right = self.mapValueScalSat(-cmd_vel.linear.y)
         pitch_left_right = self.mapValueScalSat(cmd_vel.angular.y)
-        
-        # send the commands to the mthrusters 
+
         self.setOverrideRCIN(pitch_left_right, roll_left_right, ascend_descend, yaw_left_right, forward_reverse,
                              lateral_left_right)
-        
 
     def setOverrideRCIN(self, channel_pitch, channel_roll, channel_throttle, channel_yaw, channel_forward,
                         channel_lateral):
-        ''' This function replaces setservo for motor commands.
-            It overrides Rc channels inputs and simulates motor controls.
-            In this case, each channel manages a group of motors (DOF) not individually as servo set '''
+        # This function replaces setservo for motor commands.
+        # It overrides Rc channels inputs and simulates motor controls.
+        # In this case, each channel manages a group of motors not individually as servo set
 
         msg_override = OverrideRCIn()
         msg_override.channels[0] = np.uint(channel_pitch)  # pulseCmd[4]--> pitch
@@ -461,14 +291,15 @@ class MyPythonNode(Node):
         msg_override.channels[3] = np.uint(channel_yaw)  # pulseCmd[5]--> yaw
         msg_override.channels[4] = np.uint(channel_forward)  # pulseCmd[0]--> surge
         msg_override.channels[5] = np.uint(channel_lateral)  # pulseCmd[1]--> sway
-        msg_override.channels[6] = 1500 # camera pan servo motor speed 
-        msg_override.channels[7] = 1500 #camers tilt servo motro speed
+        msg_override.channels[6] = 1500
+        msg_override.channels[7] = 1500
 
         self.pub_msg_override.publish(msg_override)
 
     def mapValueScalSat(self, value):
-        ''' Map the value of the joystick analog form -1 to 1 to a pwm value form 1100 to 1900
-            where 1500 is the stop value 1100 is maximum negative and 1900 is maximum positive'''
+        # Correction_Vel and joy between -1 et 1
+        # scaling for publishing with setOverrideRCIN values between 1100 and 1900
+        # neutral point is 1500
         pulse_width = value * 400 + 1500
 
         # Saturation
@@ -480,8 +311,6 @@ class MyPythonNode(Node):
         return int(pulse_width)
 
     def OdoCallback(self, data):
-        ''' Read the Imu data angular velocities and angles and convert the angles from quaternion angles 
-            to roll, pitch and yaw then publish them in sperate new topics '''
         orientation = data.orientation
         angular_velocity = data.angular_velocity
 
@@ -520,6 +349,9 @@ class MyPythonNode(Node):
         angle.angular.y = angle_wrt_startup[1]
         angle.angular.z = angle_wrt_startup[2]
 
+        # Free path
+        self.Euler_angle_z = angle.angular.z
+
         self.pub_angle_degre.publish(angle)
 
         # Extraction of angular velocity
@@ -541,264 +373,156 @@ class MyPythonNode(Node):
         # yaw command to be adapted using sensor feedback
         self.Correction_yaw = 1500
 
+
+    ##############################################
+    ########### Change this Function #############
+    ##############################################
+
     def RelAltCallback(self, data):
-        ## TODO ## 
-        # Implement the control logic to maintain the vehicle at the same depth  
-        # as when depth hold mode was activated (depth_p0).
-
-        current_depth = data.data  # Get the current relative altitude data
-
-        current_time = self.clock.now().to_msg().sec + self.clock.now().to_msg().nanosec * 1e-9  # Get current time in seconds
-
-        # Calculate the time difference between the current and last received relative altitude messages for integral control
-        dt = 0
-        if self.last_rel_alt_time is not None:
-            dt = current_time - self.last_rel_alt_time
-            sampling_rate = 1.0 / dt
-            # self.get_logger().info(f"Sampling rate: {sampling_rate:.2f} Hz")
-
-        self.last_rel_alt_time = current_time  # Update the last received time
-
         if (self.init_p0):
             # 1st execution, init
-            self.depth_p0 = current_depth
-            self.z_init = current_depth
-            self.initial_time = current_time
-            self.integral_error = 0
-            self.z = current_depth  # Initialize the depth estimate
-            self.w = 0  # Initialize the heave estimate
+            self.depth_p0 = data
             self.init_p0 = False
-        
-        # Uncomment the following line to maintain the initial depth when depth hold mode was activated
-        # self.z_des = self.depth_p0
-
-        # Uncomment the following line to go to z_final
-        self.z_des = self.z_final
-
-        # Uncomment the following line to use cubic trajectory for depth control
-        # self.z_des, w_des = self.cubic_trajectory()
-
-        ## set servo depth control here
-
-        # Proportional controller
-        error = self.z_des - current_depth
-        correction_depth = self.Kp * error
-        
-        # # Proportional controller with floatability compensation
-        # error = self.z_des - data
-        # correction_depth = self.Kp * error + self.floatability
-
-        # # Proportional Integral controller
-        # error = self.z_des - data
-        # self.integral_error += error * dt
-        # correction_depth = self.Kp * error + self.Ki * self.integral_error + self.floatability
-
-        # # Estimate the heave velocity using alpha-beta filter
-        # self.estimate_heave(dt)
-
-        # # PID controller
-        # error = self.z_des - data
-        # self.integral_error += error * dt
-        # self.derivative_error = w_des - self.w
-        # correction_depth = self.Kp * error + self.Ki * self.integral_error + self.Kd * self.derivative_error + self.floatability
+        # setup depth servo control here
+        # ...
 
         # update Correction_depth
-
-        #####################
-        # you supply here the depth but it takes as argument a thrust force in N
-        ####################
-
-        # correction_depth = self.floatability / 4
-        correction_depth = self.thrust_to_pwm(correction_depth)
-
+        Correction_depth = 1500     # PMW
+        self.Correction_depth = int(Correction_depth)
         # Send PWM commands to motors in timer
-        self.Correction_depth = correction_depth
 
-    def cubic_trajectory(self):
-        """
-        Generates a cubic trajectory for depth control.
-
-        This function calculates the desired depth (z_des) and the desired heave velocity (z_dot_des)
-        based on a cubic polynomial trajectory. The trajectory is defined by the initial depth (z_init),
-        the final depth (z_final), and the total time to reach the final depth (t_final).
-
-        Returns:
-            tuple: A tuple containing:
-                - z_des (float): The desired depth at the current time.
-                - z_dot_des (float): The desired heave_velocity at the current time.
-        """
-        # Get the current time as a rclpy.time.Time object
-        current_time = self.clock.now().to_msg()
-        t = (current_time.sec + current_time.nanosec * 1e-9) - self.initial_time
-
-        a2 = (3*(self.z_final - self.z_init)) / self.t_final**2
-        a3 = (-2*(self.z_final - self.z_init)) / self.t_final**3
-
-        if t < self.t_final:
-            z_des = self.z_init + a2*t**2 + a3*t**3
-            z_dot_des = self.z_init + 2*a2*t + 3*a3*t**2
-        else:
-            z_des = self.z_final
-            z_dot_des = 0
-
-        return z_des, z_dot_des
-    
-    def estimate_heave(self, dt):
-        """
-        Estimate the heave (vertical motion) of the ROV based on the time delta dt.
-        This function updates the depth and heave estimates using an alpha-beta filter
-        and publishes the estimated heave velocity and depth.
-        Args:
-            dt (float): The time delta since the last update. If dt is zero or None,
-                        the function will return immediately without updating.
-        Returns:
-            None
-        """
-        if not dt:
-            return
-        
-        # Generate a random input signal for testing
-        xm = random.randint(0, 99)
-
-        # Update depth and heave estimates
-        self.z += self.w * dt  # Update depth estimate
-
-        r = xm - self.z  # Calculate residual
-
-        self.z += self.alpha * r  # Update depth estimate with residual correction
-        self.w += (self.beta * r) / dt  # Update heave estimate with residual correction
-
-        # Publish the estimated heave velocity
+    def DvlCallback(self, data):
+        u = data.velocity.x  # Linear surge velocity
+        v = data.velocity.y  # Linear sway velocity
+        w = data.velocity.z  # Linear heave velocity
         Vel = Twist()
-        Vel.linear.z = self.w
+        Vel.linear.x = u
+        Vel.linear.y = v
+        Vel.linear.z = w
         self.pub_linear_velocity.publish(Vel)
 
-        # Publish the estimated depth
-        self.pub_depth.publish(self.z)
+    # works but at 4hz compared with 25 Hz for global_position/rel_alt !
+    # /uas1/mavlink_source runs at more than 500 Hz !    
+    # try with pyvmavlink using an udp connection, to see if gain in hz                    
+    def mavlink_callback(self, data):
+        # Check if message id is valid (I'm using SCALED_PRESSURE2)
+        if data.msgid == 137:
+            # self.get_logger().info("=> In mavlink_callback, msgid 137 SCALED_PRESSURE2, Package: " + str(data))
+            # Transform the payload in a python string
+            p = pack("QQ", *data.payload64)
+            # Transform the string in valid values
+            # https://docs.python.org/2/library/struct.html
+            time_boot_ms, water_press_abs, press_diff, temperature = unpack("Iffhxx", p)
 
-    # def DvlCallback(self, data):
-    #     u = data.velocity.x  # Linear surge velocity
-    #     v = data.velocity.y  # Linear sway velocity
-    #     w = data.velocity.z  # Linear heave velocity
-    #     Vel = Twist()
-    #     Vel.linear.x = u
-    #     Vel.linear.y = v
-    #     Vel.linear.z = w
-    #     self.pub_linear_velocity.publish(Vel)
+            # a priori, in hPa (hectoPascal)
+            # self.get_logger().info("water_press_abs=" + str(water_press_abs))
 
+            rho = 1000.0  # 1025.0 for sea water
+            g = 9.80665
+
+            # Only continue if correction mode is activated
+            # if (self.set_mode[0] or self.set_mode[1]):
+            #	return
+
+            pressure = water_press_abs * 100.0
+
+            if (self.init_p0):
+                # 1st execution, init
+                self.depth_p0 = (pressure - 101100) / (rho * g)
+                self.init_p0 = False
+
+            self.depth_wrt_startup = (pressure - 101100) / (rho * g) - self.depth_p0
+            msg = Float64()
+            msg.data = self.depth_wrt_startup
+            self.pub_depth.publish(msg)
+
+            # setup depth servo control here
+            # ...
+
+            # update Correction_depth
+
+            Correction_depth = 1500
+            self.Correction_depth = int(Correction_depth)
+        # Send PWM commands to motors in timer
 
     def pingerCallback(self, data):
         self.pinger_distance = data.data[0]
         self.pinger_confidence = data.data[1]
 
-    # self.get_logger().info("pinger_distance =" + str(self.pinger_distance))    
+        self.get_logger().info("pinger_distance =" + str(self.pinger_distance))
+        self.get_logger().info("pinger_confidence =" + str(self.pinger_confidence))
 
-    def trackerCallback(self, data):
-        self.tracked_point = data.data
+        # Controller gains
+        Kp_heading = 0.2
 
-        error_vs = np.array([self.tracked_point[0] - self.desired_point[0], self.tracked_point[1] - self.desired_point[1]]) # shape(2, 1)
-        self.pub_error_vs.publish(Float64MultiArray(data=error_vs.tolist()))
+        # Threshold
+        max_distance = 0.7
+        min_confidence = 100         # TEST THIS
 
-        # Compute time delta
-        current_time = self.get_clock().now()
-        dt = (current_time - self.last_time).nanoseconds * 1e-9
-        self.last_time = current_time
+        ### State 1: follow heading
+        if self.state == 1:
+            # Taken from the odometry callback on the IMU
+            current_heading = self.Euler_angle_z
+            # At start up the desired heading should be the initial heading
+            if self.first_time:
+                desired_heading = self.Euler_z_initial
+                self.first_time = False
+            else:
+                desired_heading = current_heading
 
-        # Derivative of error
-        derror_vs = (error_vs - self.last_error_vs) / dt
-        self.last_error_vs = error_vs
+            # control heading with function
+            self.control_heading(desired_heading, current_heading)
 
-        # Calculate the interaction matrix
-        currentL = interactionMatrix(self.tracked_point, Z=self.Z) # estimate z 
-        desiredL = interactionMatrix(self.desired_point)
-        mixedL = (currentL + desiredL) / 2
+            # # Compute heading error (wrap between -pi and pi) IF IN RADIANS
+            # error = self.normalize_angle(self.desired_heading - current_heading)
+            # # Compute thrust force
+            # yaw_moment = Kp_heading * error
+            # # Convert to PMW
+            # self.free_path_yaw_PMW = thrust_to_PMW(yaw_moment)
 
-        # Compute the velocity of the camera
-        lambda_gain = 0.7
-        derivative_gain = 0.5
-        
+            # Keep slow speed ahead
+            surge_force = 0.2  # based on clipped value visual servoing
+            self.free_path_surge_PMW = thrust_to_PMW(surge_force)
+            # Check the pinger
+            if self.pinger_distance < max_distance and self.pinger_confidence > min_confidence:
+            # if self.pinger_distance < max_distance:
+                self.state = 2
+        elif self.state == 2:
+            # Just to test if state 1 works
+            self.free_path_surge_PMW = 1500
+            self.free_path_yaw_PMW = 1500
 
-        ## Remember what we have seen in class.
-        ## This control law computation depends on the number of degrees of freedom
-        ## we want to control. Do not forget to prune the columns of L you do not need
-        ## before inverting it.
+        # Publish state
+        msg = Float64()
+        msg.data = self.data
+        self.pub_state_FSM.publish(msg)
 
-        # v cam = [sway, heave, surge, pitch, yaw, roll]
-        pruned_indices = [2] # list with indices to prune
-        L_pruned = mixedL[:, pruned_indices]        # shape (2, col_pruned)
-        L_pinv = np.linalg.pinv(L_pruned) # shape (col_pruned, 2)
-        vcam_pruned = -lambda_gain * np.dot(L_pinv, error_vs) # shape (col_pruned, 1)
-        ########### PD ################
-        # vcam_pruned = -lambda_gain * np.dot(L_pinv, error_vs) - derivative_gain * np.dot(L_pinv, derror_vs) # shape (col_pruned, 1)
-        ##############################
-        # reconstruct vcam
-        vcam_vs = np.zeros(6)
-        # vcam_vs[0] = vcam_pruned[0] # sway
-        # vcam_vs[4] = vcam_pruned[0] # yaw
-        vcam_vs[2] = vcam_pruned[0] # surge
+            
+            
+    def control_heading(self, desired_heading, current_heading):
+        Kp_heading = 0.2    
+        # Compute heading error (wrap between -pi and pi) IF IN RADIANS
+        error = self.normalize_angle(self.desired_heading - current_heading)
+        # Compute thrust force
+        yaw_moment = Kp_heading * error
+        # Convert to PMW
+        self.free_path_yaw_PMW = thrust_to_PMW(yaw_moment)
 
-        # vcam_vs = -lambda_gain * np.dot(np.linalg.pinv(mixedL), error_vs)
-        # pruner_vcam = np.array([1, 0, 0, 0, 1, 0]) # v cam = [sway, heave, surge, pitch, yaw, roll] I think
-        # vcam_vs = vcam_vs * pruner_vcam
+    # def normalize_angle(self, angle):
+    #     while angle > math.pi:
+    #         angle -= 2 * math.pi
+    #     while angle < -math.pi:
+    #         angle += 2 * math.pi
+    #     return angle
 
-        msg_cam_velocity = Twist()
-        msg_cam_velocity.linear.x = float(vcam_vs[0])
-        msg_cam_velocity.linear.y = float(vcam_vs[1])
-        msg_cam_velocity.linear.z = float(vcam_vs[2])
-        msg_cam_velocity.angular.x = float(vcam_vs[3])
-        msg_cam_velocity.angular.y = float(vcam_vs[4])
-        msg_cam_velocity.angular.z = float(vcam_vs[5])
-        self.pub_cam_velocity.publish(msg_cam_velocity)
+    def normalize_angle(self, angle):   # angle in degrees
+        while angle > 180:
+            angle -= 360
+        while angle < -180:
+            angle += 360
+        return angle
 
-        # Apply the transformation
-        # Define the homogeneous transformation matrix from the camera frame to the robot frame
-        homogeneous_transform_from_cam_to_robot = np.array([
-            [0, 0, 1, 0.2],  # 20 cm offset in the x-axis
-            [1, 0, 0, 0],    
-            [0, 1, 0, 0],    # z - axis robot might be upward !!!!!!!!!!!!!!!!!!
-            [0, 0, 0, 1]     # Homogeneous coordinate
-        ])
-
-        # Transform the velocity of the camera to the robot frame
-        vrobot_vs = transform(vcam_vs, homogeneous_transform_from_cam_to_robot)
-        self.vrobot_vs = np.clip(vrobot_vs, -0.2, 0.2)
-
-        # Publish the robot velocity
-        msg_robot_velocity = Twist()
-        msg_robot_velocity.linear.x = float(vrobot_vs[0])
-        msg_robot_velocity.linear.y = float(vrobot_vs[1])
-        msg_robot_velocity.linear.z = float(vrobot_vs[2])
-        msg_robot_velocity.angular.x = float(vrobot_vs[3])
-        msg_robot_velocity.angular.y = float(vrobot_vs[4])
-        msg_robot_velocity.angular.z = float(vrobot_vs[5])
-        self.pub_robot_velocity.publish(msg_robot_velocity)
-
-        # # Extract the control inputs
-        # roll = self.thrust_to_pwm(vrobot_vs[0])
-        # pitch = self.thrust_to_pwm(vrobot_vs[1])
-        # yaw = self.thrust_to_pwm(vrobot_vs[2])
-        # surge = self.thrust_to_pwm(vrobot_vs[3])
-        # sway = self.thrust_to_pwm(vrobot_vs[4])
-        # heave = self.thrust_to_pwm(vrobot_vs[5])
-        # surge = self.thrust_to_pwm(vrobot_vs[0])
-        # sway = self.thrust_to_pwm(vrobot_vs[1])
-        # heave = self.thrust_to_pwm(vrobot_vs[2])
-        # roll = self.thrust_to_pwm(vrobot_vs[3])
-        # pitch = self.thrust_to_pwm(vrobot_vs[4])
-        # yaw = self.thrust_to_pwm(vrobot_vs[5])
-        # # Send PWM commands to motors
-        # self.setOverrideRCIN(pitch, roll, heave, yaw, surge, sway)
-
-    def desiredPointCallback(self, data):
-        self.desired_point = data.data
-
-    def radiusCallback(self, data):
-        self.radius = data.data
-        if self.radius > 0.001:
-            self.Z = 0.07 / self.radius 
-            msg_Z = Float64()
-            msg_Z.data = self.Z
-            self.pub_depth_Z_estimated.publish(msg_Z)
+    # self.get_logger().info("pinger_distance =" + str(self.pinger_distance))
 
     def subscriber(self):
         qos_profile = QoSProfile(
@@ -817,23 +541,14 @@ class MyPythonNode(Node):
         self.subrel_alt = self.create_subscription(Float64, "global_position/rel_alt", self.RelAltCallback,
                                                    qos_profile=qos_profile)
         self.subrel_alt  # prevent unused variable warning
-       
+        # self.subwater_pressure = self.create_subscription(Mavlink,"mavlink/from", self.mavlink_callback, qos_profile = qos_profile)
+        # self.subwater_pressure = self.create_subscription(Mavlink,"/uas1/mavlink_source", self.mavlink_callback, qos_profile = qos_profile)
+        # self.subwater_pressure # prevent unused variable warning
+
         # self.sub = self.create_subscription(DVL, "/dvl/data", DvlCallback)
         self.subping = self.create_subscription(Float64MultiArray, "ping1d/data", self.pingerCallback,
                                                 qos_profile=qos_profile)
         self.subping  # prevent unused variable warning
-
-        self.tracked_point = self.create_subscription(Float64MultiArray, "tracked_point", self.trackerCallback,
-                                                qos_profile=qos_profile)
-        self.tracked_point
-        
-        self.desired_point = self.create_subscription(Float64MultiArray, "desired_point", self.desiredPointCallback,
-                                                qos_profile=qos_profile)
-        self.desired_point
-
-        self.radius_buoy = self.create_subscription(Float64, "radius_buoy", self.radiusCallback,
-                                                qos_profile=qos_profile)
-        self.radius_buoy         
 
         self.get_logger().info("Subscriptions done.")
 
@@ -862,44 +577,7 @@ class MyPythonNode(Node):
             pulse_width = 1100
 
         return int(pulse_width)
-    
-def interactionMatrix(point, Z=1):
-    x = point[0]
-    y = point[1]
-    # Calculate the interaction matrix
-    interaction_matrix = np.array([[-1/Z, 0, x/Z, x*y, -(1 + x**2), y],
-                                    [0, -1/Z, y/Z, 1 + y**2, -x*y, -x]])
-    return interaction_matrix
 
-# Transform the velocity of the camera to the robot frame
-def transform(vcam, transform_matrix):
-    """
-    Transforms a velocity vector from the camera frame to the robot frame using a homogeneous transformation matrix.
-
-    Parameters:
-    vcam (numpy.ndarray): Velocity vector in the camera frame (6x1).
-    transform_matrix (numpy.ndarray): Homogeneous transformation matrix (4x4) from camera to robot.
-
-    Returns:
-    numpy.ndarray: Velocity vector in the robot frame (6x1).
-    """
-    # Extract the rotation matrix (3x3) and translation vector (3x1) from the homogeneous transform
-    rotation_matrix = transform_matrix[:3, :3]
-    translation_vector = transform_matrix[:3, 3]
-
-    vcam_lin = vcam[:3]
-    vcam_ang = vcam[3:] 
-
-    # Transform the linear velocity
-    linear_velocity_robot = np.dot(rotation_matrix, vcam_lin) + np.cross(translation_vector, np.dot(rotation_matrix, vcam_ang))
-
-    # Transform the angular velocity
-    angular_velocity_robot = np.dot(rotation_matrix, vcam_ang)
-
-    # Combine the transformed linear and angular velocities
-    vrobot = np.concatenate((linear_velocity_robot, angular_velocity_robot), axis=0)
-
-    return vrobot
 
 def main(args=None):
     rclpy.init(args=args)
