@@ -13,10 +13,10 @@ autonomous_rov/camera_parameters.py
 autonomous_rov/image_processing_mir.py
 autonomous_rov/image_processing_tracker.py
 autonomous_rov/image_processing_tracker_DUNE.py
-autonomous_rov/linstenerMir-original copy.py
 autonomous_rov/linstenerMir-original.py
 autonomous_rov/listenerMIR-depth-practise.py
 autonomous_rov/listenerMIR-old.py
+autonomous_rov/listenerMIR-visual-servoing.py
 autonomous_rov/listenerMIR.py
 autonomous_rov/pinger_node.py
 autonomous_rov/video.py

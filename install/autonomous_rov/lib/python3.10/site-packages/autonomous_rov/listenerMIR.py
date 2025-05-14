@@ -46,7 +46,7 @@ class MyPythonNode(Node):
         self.pub_depth_Z_estimated = self.create_publisher(Float64, 'depth_Z_estimated', 10)
         self.pub_cam_velocity = self.create_publisher(Twist, 'cam_velocity', 10)
         self.pub_error_vs = self.create_publisher(Float64MultiArray, 'error_vs', 10)
-        self.get_logger().info("Publishers created.")
+        self.get_logger().info("Publishers created!!!!!!")
 
         self.get_logger().info("ask router to create endpoint to enable mavlink/from publication.")
         # self.addEndPoint()

@@ -1,0 +1,75 @@
+[0.973s] Invoking command in '/home/loeder/Documents/BlueRov/bluerov_ws/src/ping_sonar_ros-master': PYTHONPATH=/home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../build/ping_sonar_ros build --build-base /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build install --record /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/install.log --single-version-externally-managed install_data
+[1.236s] running egg_info
+[1.237s] creating ../build/ping_sonar_ros/ping_sonar_ros.egg-info
+[1.237s] writing ../build/ping_sonar_ros/ping_sonar_ros.egg-info/PKG-INFO
+[1.238s] writing dependency_links to ../build/ping_sonar_ros/ping_sonar_ros.egg-info/dependency_links.txt
+[1.238s] writing entry points to ../build/ping_sonar_ros/ping_sonar_ros.egg-info/entry_points.txt
+[1.238s] writing requirements to ../build/ping_sonar_ros/ping_sonar_ros.egg-info/requires.txt
+[1.238s] writing top-level names to ../build/ping_sonar_ros/ping_sonar_ros.egg-info/top_level.txt
+[1.239s] writing manifest file '../build/ping_sonar_ros/ping_sonar_ros.egg-info/SOURCES.txt'
+[1.242s] reading manifest file '../build/ping_sonar_ros/ping_sonar_ros.egg-info/SOURCES.txt'
+[1.242s] adding license file 'LICENSE'
+[1.243s] writing manifest file '../build/ping_sonar_ros/ping_sonar_ros.egg-info/SOURCES.txt'
+[1.243s] running build
+[1.243s] running build_py
+[1.243s] creating /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build
+[1.243s] creating /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib
+[1.243s] creating /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros
+[1.244s] copying ping_sonar_ros/range_pub_node.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros
+[1.244s] copying ping_sonar_ros/__init__.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros
+[1.244s] copying ping_sonar_ros/range_pub_component.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros
+[1.244s] copying ping_sonar_ros/ping1d_node.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros
+[1.244s] copying ping_sonar_ros/ping1d_component.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros
+[1.244s] creating /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros/ping-python
+[1.244s] creating /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros/ping-python/brping
+[1.245s] copying ping_sonar_ros/ping-python/brping/__init__.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros/ping-python/brping
+[1.245s] copying ping_sonar_ros/ping-python/brping/ping360.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros/ping-python/brping
+[1.245s] copying ping_sonar_ros/ping-python/brping/ping1d.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros/ping-python/brping
+[1.245s] copying ping_sonar_ros/ping-python/brping/definitions.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros/ping-python/brping
+[1.245s] copying ping_sonar_ros/ping-python/brping/device.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros/ping-python/brping
+[1.245s] copying ping_sonar_ros/ping-python/brping/pingmessage.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros/ping-python/brping
+[1.246s] running install
+[1.246s] running install_lib
+[1.249s] creating /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros
+[1.249s] copying /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros/range_pub_node.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros
+[1.249s] copying /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros/__init__.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros
+[1.250s] copying /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros/range_pub_component.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros
+[1.250s] copying /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros/ping1d_node.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros
+[1.250s] creating /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros/ping-python
+[1.250s] creating /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros/ping-python/brping
+[1.250s] copying /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros/ping-python/brping/__init__.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros/ping-python/brping
+[1.250s] copying /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros/ping-python/brping/ping360.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros/ping-python/brping
+[1.250s] copying /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros/ping-python/brping/ping1d.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros/ping-python/brping
+[1.250s] copying /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros/ping-python/brping/definitions.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros/ping-python/brping
+[1.250s] copying /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros/ping-python/brping/device.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros/ping-python/brping
+[1.250s] copying /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros/ping-python/brping/pingmessage.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros/ping-python/brping
+[1.250s] copying /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build/lib/ping_sonar_ros/ping1d_component.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros
+[1.251s] byte-compiling /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros/range_pub_node.py to range_pub_node.cpython-310.pyc
+[1.251s] byte-compiling /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros/__init__.py to __init__.cpython-310.pyc
+[1.251s] byte-compiling /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros/range_pub_component.py to range_pub_component.cpython-310.pyc
+[1.252s] byte-compiling /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros/ping1d_node.py to ping1d_node.cpython-310.pyc
+[1.252s] byte-compiling /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros/ping-python/brping/__init__.py to __init__.cpython-310.pyc
+[1.252s] byte-compiling /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros/ping-python/brping/ping360.py to ping360.cpython-310.pyc
+[1.254s] byte-compiling /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros/ping-python/brping/ping1d.py to ping1d.cpython-310.pyc
+[1.255s] byte-compiling /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros/ping-python/brping/definitions.py to definitions.cpython-310.pyc
+[1.256s] byte-compiling /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros/ping-python/brping/device.py to device.cpython-310.pyc
+[1.257s] byte-compiling /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros/ping-python/brping/pingmessage.py to pingmessage.cpython-310.pyc
+[1.259s] byte-compiling /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros/ping1d_component.py to ping1d_component.cpython-310.pyc
+[1.260s] running install_data
+[1.260s] creating /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/share/ament_index
+[1.260s] creating /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/share/ament_index/resource_index
+[1.260s] creating /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/share/ament_index/resource_index/packages
+[1.261s] copying resource/ping_sonar_ros -> /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/share/ament_index/resource_index/packages
+[1.261s] copying package.xml -> /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/share/ping_sonar_ros
+[1.261s] creating /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/share/ping_sonar_ros/launch
+[1.261s] copying launch/ping_sonar.launch.py -> /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/share/ping_sonar_ros/launch/
+[1.261s] copying launch/run_pinger.launch -> /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/share/ping_sonar_ros/launch/
+[1.261s] creating /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/share/ping_sonar_ros/rviz
+[1.261s] copying rviz/ping_sonar.rviz -> /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/share/ping_sonar_ros/rviz/
+[1.261s] running install_egg_info
+[1.263s] Copying ../build/ping_sonar_ros/ping_sonar_ros.egg-info to /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages/ping_sonar_ros-0.0.0-py3.10.egg-info
+[1.264s] running install_scripts
+[1.285s] Installing ping1d_node script to /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/ping_sonar_ros
+[1.285s] Installing range_node script to /home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/ping_sonar_ros
+[1.285s] writing list of installed files to '/home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/install.log'
+[1.333s] Invoked command in '/home/loeder/Documents/BlueRov/bluerov_ws/src/ping_sonar_ros-master' returned '0': PYTHONPATH=/home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/loeder/Documents/BlueRov/bluerov_ws/src/install/ping_sonar_ros/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated setup.py egg_info --egg-base ../build/ping_sonar_ros build --build-base /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/build install --record /home/loeder/Documents/BlueRov/bluerov_ws/src/build/ping_sonar_ros/install.log --single-version-externally-managed install_data
